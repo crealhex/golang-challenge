@@ -10,15 +10,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
 var (
-	apiKey = flag.String("pub", "", "Public API key")
-	secret = flag.String("priv", "", "Private API secret")
+	apiKey = flag.String("pub", "9d2d890d05392417fa76b24057ef7d8f", "Public API key")
+	secret = flag.String("priv", "9de5f9d35c5d9d7d72a10668f384cfbcd1693108", "Private API secret")
 )
 
 type CharacterDataWrapper struct {
@@ -189,6 +188,9 @@ func getCharacters(body []byte) []Character {
 
 	if err != nil {
 		fmt.Println("Error al obtener los datos...")
+		duration := time.Duration(3) * time.Second
+		time.Sleep(duration)
+		os.Exit(1)
 	}
 
 	return characterDataWrapper.Data.Results
@@ -284,22 +286,55 @@ func printCharacters(response *http.Response) {
 	}
 }
 
-func detectSystem() {
-	fmt.Print("Corriendo en ")
+func getSysmode() string {
+	scanner := bufio.NewScanner(os.Stdin)
+	answer := ""
+	sysmode := ""
 
-	switch os := runtime.GOOS; os {
-	case "darwin":
-		fmt.Println("OS X...")
-	case "linux":
-		fmt.Println("Linux...")
-	default:
-		fmt.Println(os + "...")
+	state := 0
+	for state < 1 {
+		fmt.Print(`
+¿En qué consola estás corriendo esto?
+  1. Consola de sistemas windows
+  2. Consola de sistemas UNIX
+
+  `)
+		for scanner.Scan() {
+			answer = scanner.Text()
+			break
+		}
+
+		if answer == "1" {
+			sysmode = "\r\n"
+			state = 1
+
+		} else if answer == "2" {
+			sysmode = "\n"
+			state = 1
+
+		} else {
+			fmt.Println("Por favor ingresa una respuesta válida")
+			fmt.Println()
+		}
 	}
 
-	fmt.Println()
+
+	//switch system := runtime.GOOS; system {
+	//case "darwin":
+	//	sysmode = "\n"
+	//	fmt.Println("OS X...")
+	//case "linux":
+	//	sysmode = "\n"
+	//	fmt.Println("Linux...")
+	//default:
+	//	sysmode = "\r\n"
+	//	fmt.Println(system + "...")
+	//}
+
+	return sysmode
 }
 
-func getKeys() [2]string {
+func getKeys(sysmode string) [2]string {
 	reader := bufio.NewReader(os.Stdin)
 
 	flag.Parse()
@@ -309,18 +344,19 @@ func getKeys() [2]string {
 
 	state := 0
 	for state < 1 {
-		fmt.Print("¿Deseas ingresar tus apikeys por consola?(y/N): ")
+		fmt.Println("")
+		fmt.Print("¿Deseas ingresar tus propias apikeys?(y/N): ")
 		preference, _ := reader.ReadString('\n')
-		preference = strings.ToLower(strings.Replace(preference, "\n", "", -1))
+		preference = strings.ToLower(strings.Replace(preference, sysmode, "", -1))
 
 		if preference == "y" {
 			fmt.Print("Ingresa tu llave privada: ")
 			privateKey, _ = reader.ReadString('\n')
-			privateKey = strings.Replace(privateKey, "\n", "", -1)
+			privateKey = strings.Replace(privateKey, sysmode, "", -1)
 
 			fmt.Print("Ingresa tu llave pública: ")
 			publicKey, _ = reader.ReadString('\n')
-			publicKey = strings.Replace(publicKey, "\n", "", -1)
+			publicKey = strings.Replace(publicKey, sysmode, "", -1)
 
 			state = 1
 
@@ -348,7 +384,7 @@ func getKeys() [2]string {
 	return keys
 }
 
-func getParamsExtra() string {
+func getParamsExtra(sysmode string) string {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println()
@@ -356,14 +392,15 @@ func getParamsExtra() string {
 	fmt.Println("2. Listar")
 	fmt.Println()
 	option, _ := reader.ReadString('\n')
-	option = strings.Replace(option, "\n", "", -1)
+	option = strings.Replace(option, sysmode, "", -1)
 
 	params := searchParameters("", "", "")
 
 	if option == "1" {
 		fmt.Print("Escribe el nombre de tu personaje favorito: ")
 		character, _ := reader.ReadString('\n')
-		character = strings.Replace(character, "\n", "", -1)
+		character = strings.Replace(character, sysmode, "", -1)
+
 		fmt.Println()
 		fmt.Println("******************************************************************************************")
 		fmt.Println("//////////////////////////////////////////////////////////////////////////////////////////")
@@ -375,9 +412,21 @@ func getParamsExtra() string {
 	} else if option == "2" {
 		fmt.Println("Listando los primeros 20 personajes ordenados por nombre...")
 
+		fmt.Println()
+		fmt.Println("******************************************************************************************")
+		fmt.Println("//////////////////////////////////////////////////////////////////////////////////////////")
+		fmt.Println("******************************************************************************************")
+		fmt.Println()
+
 		params = searchParameters("20", "", "name")
 	} else {
 		fmt.Println("Iniciando búsqueda por defecto...")
+
+		fmt.Println()
+		fmt.Println("******************************************************************************************")
+		fmt.Println("//////////////////////////////////////////////////////////////////////////////////////////")
+		fmt.Println("******************************************************************************************")
+		fmt.Println()
 		fmt.Println()
 	}
 
@@ -386,10 +435,10 @@ func getParamsExtra() string {
 
 func main() {
 
-	detectSystem()
-	keys := getKeys()
+	sysmode := getSysmode()
+	keys := getKeys(sysmode)
 
-	params := getParamsExtra()
+	params := getParamsExtra(sysmode)
 	response := getConnection(keys[0], keys[1], params)
 	printCharacters(response)
 
@@ -401,15 +450,17 @@ func main() {
 		fmt.Print("¿Deseas realizar otra búsqueda?(Y/n)")
 		fmt.Println()
 		answer, _ := reader.ReadString('\n')
-		answer = strings.ToLower(strings.Replace(answer, "\n", "", -1))
+		answer = strings.ToLower(strings.Replace(answer, sysmode, "", -1))
 
 		if answer == "y" || answer == "" {
-			params := getParamsExtra()
+			params := getParamsExtra(sysmode)
 			response := getConnection(keys[0], keys[1], params)
 			printCharacters(response)
 
 		} else if answer == "n" {
 			fmt.Println("Gracias por probar...")
+			duration := time.Duration(3) * time.Second
+			time.Sleep(duration)
 			state = 2
 
 		} else {
