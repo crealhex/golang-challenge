@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	// Constante para quitar el fin de línea que trae por defecto
+	// Constante para quitar el fin de línea que trae por defecto tu consola
 	inputrefactor = "\r\n"
 )
 
@@ -188,12 +188,12 @@ func getConnection(publicKey, privateKey, searchParams string) *http.Response {
 	if err != nil {
 		fmt.Println("Error al establecer la conexión :", err)
 	}
-	defer response.Body.Close()
 
 	return response
 }
 
 func getBody(response *http.Response) []byte {
+	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
@@ -396,6 +396,8 @@ func getParamsExtra() string {
 	fmt.Println("1. Buscar por nombre")
 	fmt.Println("2. Listar")
 	fmt.Println()
+
+	fmt.Print("Digita una opción: ")
 	option, _ := reader.ReadString('\n')
 	option = strings.TrimRight(option, inputrefactor)
 
