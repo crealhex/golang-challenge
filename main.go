@@ -17,14 +17,17 @@ import (
 )
 
 const (
+	// Constante para quitar el fin de línea que trae por defecto
 	inputrefactor = "\r\n"
 )
 
 var (
+	// Inserta aquí tus propias credenciales de la API
 	apiKey = flag.String("pub", "9d2d890d05392417fa76b24057ef7d8f", "Public API key")
 	secret = flag.String("priv", "9de5f9d35c5d9d7d72a10668f384cfbcd1693108", "Private API secret")
 )
 
+// CharacterDataWrapper provee los estados e información de la conexión
 type CharacterDataWrapper struct {
 	Code      int                    `json:"code,omitempty"`
 	Status    string                 `json:"status,omitempty"`
@@ -33,6 +36,7 @@ type CharacterDataWrapper struct {
 	Data      CharacterDataContainer `json:"data,omitempty"`
 }
 
+// CharacterDataContainer provee estados de la consulta
 type CharacterDataContainer struct {
 	Offset  int         `json:"offset,omitempty"`
 	Limit   int         `json:"limit,omitempty"`
@@ -41,6 +45,7 @@ type CharacterDataContainer struct {
 	Results []Character `json:"results,omitempty"`
 }
 
+// Character provee información detallada de cada personaje
 type Character struct {
 	ID          int          `json:"id,omitempty"`
 	Name        string       `json:"name,omitempty"`
@@ -54,11 +59,13 @@ type Character struct {
 	Series		SeriesList   `json:"series,omitempty"`
 }
 
+// Url provee los datos de todas las URLs de un personaje
 type Url struct {
 	Type string `json:"type,omitempty"`
 	URL  string `json:"url,omitempty"`
 }
 
+// ComicLists provee los comics en un array e info de la consulta
 type ComicList struct {
 	Available     int            `json:"available,omitempty"`
 	Returned      int            `json:"returned,omitempty"`
@@ -66,11 +73,13 @@ type ComicList struct {
 	Items         []ComicSummary `json:"items,omitempty"`
 }
 
+// ComicSummary provee los datos de cada comic de un personaje
 type ComicSummary struct {
 	ResourceURI string `json:"resourceURI,omitempty"`
 	Name        string `json:"name,omitempty"`
 }
 
+// StoryList provee las historias en un array e info de la consulta
 type StoryList struct {
 	Available     int            `json:"available,omitempty"`
 	Returned      int            `json:"returned,omitempty"`
@@ -78,12 +87,14 @@ type StoryList struct {
 	Items         []StorySummary `json:"items,omitempty"`
 }
 
+// StorySummary provee los datos de cada historia de un personaje
 type StorySummary struct {
 	ResourceURI string `json:"resourceURI,omitempty"`
 	Name        string `json:"name,omitempty"`
 	Type		string `json:"type,omitempty"`
 }
 
+// EventList provee los eventos en un array e info de la consulta
 type EventList struct {
 	Available     int            `json:"available,omitempty"`
 	Returned      int            `json:"returned,omitempty"`
@@ -91,11 +102,13 @@ type EventList struct {
 	Items         []EventSummary `json:"items,omitempty"`
 }
 
+// EventSummary provee los datos de cada evento de un personaje
 type EventSummary struct {
 	ResourceURI string `json:"resourceURI,omitempty"`
 	Name        string `json:"name,omitempty"`
 }
 
+// SeriesList provee las series en un array e info de la consulta
 type SeriesList struct {
 	Available     int              `json:"available,omitempty"`
 	Returned      int              `json:"returned,omitempty"`
@@ -103,17 +116,19 @@ type SeriesList struct {
 	Items         []SeriesSummary  `json:"items,omitempty"`
 }
 
+// SeriesSummary provee los datos de cada serie de un personaje
 type SeriesSummary struct {
 	ResourceURI string `json:"resourceURI,omitempty"`
 	Name        string `json:"name,omitempty"`
 }
 
-// -----------------------
-
+/*
+ * Esto establece el formato de tiempo que usa la API
+ * Nos sirve para ser usado en la estructura Character
+ * para compatiblizar el valor de Modified
+ */
 type Date string
-
 const dateLayout = "2006-01-02T15:04:05-0700"
-
 func (d Date) Parse() time.Time {
 	t, err := time.Parse(dateLayout, string(d))
 
@@ -123,9 +138,13 @@ func (d Date) Parse() time.Time {
 	return t
 }
 
-// -----------------------
 
-func makeTS() string {
+/*
+ * Las siguientes funciones nos ayudan
+ * a generar una URL correcta para poder establecer
+ * un 200 StatusCode en la conexión
+ */
+func makeTimestamp() string {
 	date := time.Now().UnixNano() / int64(time.Millisecond)
 	return strconv.FormatInt(date, 10)
 }
@@ -138,6 +157,10 @@ func makeHash(ts, privateKey, publicKey string) string {
 	return hash
 }
 
+/*
+ * Esta particular función ayuda a agregar
+ * parámetros de búsqueda en la URL
+ */
 func searchParameters(limit, name, order string) string {
 	if limit != "" {
 		limit = "&limit=" + limit
@@ -154,29 +177,23 @@ func searchParameters(limit, name, order string) string {
 	return limit + name + order
 }
 
+// Crea la conexión con la Marvel API
 func getConnection(publicKey, privateKey, searchParams string) *http.Response {
-	ts := makeTS()
+	ts := makeTimestamp()
 	hash := makeHash(ts, privateKey, publicKey)
-
 	URL := "http://gateway.marvel.com/v1/public/characters?ts=" + ts + "&apikey=" + publicKey + "&hash=" + hash + searchParams
-	// fmt.Println(URL)
 
-	// resp, err := http.Get("http://example.com/")
 	response, err := http.Get(URL)
 
 	if err != nil {
 		fmt.Println("Error al establecer la conexión :", err)
 	}
-	/*
-		if response.StatusCode == 200 {
-			fmt.Println("Conexión establecida!")
-		} */
+	defer response.Body.Close()
 
 	return response
 }
 
 func getBody(response *http.Response) []byte {
-	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
@@ -187,6 +204,9 @@ func getBody(response *http.Response) []byte {
 	return body
 }
 
+//////
+// Characters
+/////
 func getCharacters(body []byte) []Character {
 	characterDataWrapper := CharacterDataWrapper{}
 	err := json.Unmarshal(body, &characterDataWrapper)
@@ -201,6 +221,10 @@ func getCharacters(body []byte) []Character {
 	return characterDataWrapper.Data.Results
 }
 
+/*
+ * Imprime todos los datos consultados en consola
+ * Son la gran mayoría de datos que ofrece la API
+ */
 func printCharacters(response *http.Response) {
 	body := getBody(response)
 	characters := getCharacters(body)
@@ -291,6 +315,8 @@ func printCharacters(response *http.Response) {
 	}
 }
 
+/////
+// JUST FOR FUN
 func getSysmode() {
 	fmt.Print("Corriendo en ")
 
@@ -304,6 +330,10 @@ func getSysmode() {
 	}
 }
 
+/*
+ * Servible para saber la preferencia del usuario
+ * ingresar tokens por consola o usar las tokens's flag
+ */
 func getKeys() [2]string {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -354,6 +384,11 @@ func getKeys() [2]string {
 	return keys
 }
 
+/*
+ * Usado para generar las opciones de búsqueda,
+ * estas establecen qué parámetros llevará
+ * searchParameters()
+ */
 func getParamsExtra() string {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -403,8 +438,12 @@ func getParamsExtra() string {
 	return params
 }
 
+/*
+ * Aquí se incluye también un loop
+ * para saber en qué momento terminar la ejecución
+ * por decisión del usuario
+ */
 func main() {
-
 	getSysmode()
 	keys := getKeys()
 
