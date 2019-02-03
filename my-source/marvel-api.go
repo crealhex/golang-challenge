@@ -38,13 +38,16 @@ type CharacterDataContainer struct {
 }
 
 type Character struct {
-	ID          int       `json:"id,omitempty"`
-	Name        string    `json:"name,omitempty"`
-	Description string    `json:"description,omitempty"`
-	Modified    Date      `json:"modified,omitempty"`
-	ResourceURI string    `json:"resourceURI,omitempty"`
-	URLS        []Url     `json:"urls,omitempty"`
-	Comics      ComicList `json:"comics,omitempty"`
+	ID          int          `json:"id,omitempty"`
+	Name        string       `json:"name,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Modified    Date         `json:"modified,omitempty"`
+	ResourceURI string       `json:"resourceURI,omitempty"`
+	URLS        []Url        `json:"urls,omitempty"`
+	Comics      ComicList    `json:"comics,omitempty"`
+	Stories     StoryList    `json:"stories,omitempty"`
+	Events		EventList    `json:"events,omitempty"`
+	Series		SeriesList   `json:"series,omitempty"`
 }
 
 type Url struct {
@@ -53,9 +56,52 @@ type Url struct {
 }
 
 type ComicList struct {
-	Available     int    `json:"available,omitempty"`
-	Returned      int    `json:"returned,omitempty"`
-	CollectionURI string `json:"collectionURI,omitempty"`
+	Available     int            `json:"available,omitempty"`
+	Returned      int            `json:"returned,omitempty"`
+	CollectionURI string         `json:"collectionURI,omitempty"`
+	Items         []ComicSummary `json:"items,omitempty"`
+}
+
+type ComicSummary struct {
+	ResourceURI string `json:"resourceURI,omitempty"`
+	Name        string `json:"name,omitempty"`
+}
+
+type StoryList struct {
+	Available     int            `json:"available,omitempty"`
+	Returned      int            `json:"returned,omitempty"`
+	CollectionURI string         `json:"collectionURI,omitempty"`
+	Items         []StorySummary `json:"items,omitempty"`
+}
+
+type StorySummary struct {
+	ResourceURI string `json:"resourceURI,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Type		string `json:"type,omitempty"`
+}
+
+type EventList struct {
+	Available     int            `json:"available,omitempty"`
+	Returned      int            `json:"returned,omitempty"`
+	CollectionURI string         `json:"collectionURI,omitempty"`
+	Items         []EventSummary `json:"items,omitempty"`
+}
+
+type EventSummary struct {
+	ResourceURI string `json:"resourceURI,omitempty"`
+	Name        string `json:"name,omitempty"`
+}
+
+type SeriesList struct {
+	Available     int              `json:"available,omitempty"`
+	Returned      int              `json:"returned,omitempty"`
+	CollectionURI string           `json:"collectionURI,omitempty"`
+	Items         []SeriesSummary  `json:"items,omitempty"`
+}
+
+type SeriesSummary struct {
+	ResourceURI string `json:"resourceURI,omitempty"`
+	Name        string `json:"name,omitempty"`
 }
 
 // -----------------------
@@ -148,17 +194,6 @@ func getCharacters(body []byte) []Character {
 	return characterDataWrapper.Data.Results
 }
 
-/* func getCharacterURLS(body []byte) []Url {
-	characterDataWrapper := CharacterDataWrapper{}
-	err := json.Unmarshal(body, &characterDataWrapper)
-
-	if err != nil {
-		fmt.Println("Error al obtener los datos...")
-	}
-
-	return characterDataWrapper.Data.Results
-} */
-
 func printCharacters(response *http.Response) {
 	body := getBody(response)
 	characters := getCharacters(body)
@@ -176,22 +211,75 @@ func printCharacters(response *http.Response) {
 		fmt.Println("---------------------------------------------")
 		fmt.Println("                   URLS")
 		fmt.Println("---------------------------------------------")
-
 		urldata := characters[k].URLS
 		for url := range urldata {
+			fmt.Println("··· ··· ···")
 			fmt.Println("type: ", urldata[url].Type)
 			fmt.Println("url: ", urldata[url].URL)
-			fmt.Println("---------------------------------------------")
 		}
 
+		fmt.Println("---------------------------------------------")
 		fmt.Println("                  COMICS")
 		fmt.Println("---------------------------------------------")
 		fmt.Println("Disponible: ", characters[k].Comics.Available)
 		fmt.Println("Returned: ", characters[k].Comics.Returned)
 		fmt.Println("CollectionURI: ", characters[k].Comics.CollectionURI)
+		comics := characters[k].Comics.Items
+		for comic := range comics {
+			fmt.Println("··· ··· ···")
+			fmt.Println("Nombre: ", comics[comic].Name)
+			fmt.Println("ResourceURI: ", comics[comic].ResourceURI)
+		}
+
+		fmt.Println("---------------------------------------------")
+		fmt.Println("                  HISTORIA")
+		fmt.Println("---------------------------------------------")
+		fmt.Println("Disponible: ", characters[k].Stories.Available)
+		fmt.Println("Returned: ", characters[k].Stories.Returned)
+		fmt.Println("CollectionURI: ", characters[k].Stories.CollectionURI)
+		stories := characters[k].Stories.Items
+		for story := range stories {
+			fmt.Println("··· ··· ···")
+			fmt.Println("Nombre: ", stories[story].Name)
+			fmt.Println("Tipo: ", stories[story].Type)
+			fmt.Println("ResourceURI: ", stories[story].ResourceURI)
+		}
+
+		fmt.Println("---------------------------------------------")
+		fmt.Println("                  EVENTOS")
+		fmt.Println("---------------------------------------------")
+		fmt.Println("Disponible: ", characters[k].Events.Available)
+		fmt.Println("Returned: ", characters[k].Events.Returned)
+		fmt.Println("CollectionURI: ", characters[k].Events.CollectionURI)
+		events := characters[k].Events.Items
+		for event := range events {
+			fmt.Println("··· ··· ···")
+			fmt.Println("ResourceURI: ", events[event].ResourceURI)
+			fmt.Println("Nombre: ", events[event].Name)
+		}
+
+		fmt.Println("---------------------------------------------")
+		fmt.Println("                  SERIES")
+		fmt.Println("---------------------------------------------")
+		fmt.Println("Disponible: ", characters[k].Series.Available)
+		fmt.Println("Returned: ", characters[k].Series.Returned)
+		fmt.Println("CollectionURI: ", characters[k].Series.CollectionURI)
+		theseries := characters[k].Series.Items
+		for series := range theseries {
+			fmt.Println("··· ··· ···")
+			fmt.Println("ResourceURI: ", theseries[series].ResourceURI)
+			fmt.Println("Nombre: ", theseries[series].Name)
+		}
+
+		fmt.Println("---------------------------------------------")
+		fmt.Println("INFORMACIÓN: Este es el resultado nro ", counter)
+		fmt.Println("---------------------------------------------")
+
 
 		fmt.Println()
-		fmt.Println("*********************************************")
+		fmt.Println("******************************************************************************************")
+		fmt.Println("//////////////////////////////////////////////////////////////////////////////////////////")
+		fmt.Println("******************************************************************************************")
 		fmt.Println()
 	}
 }
@@ -277,7 +365,9 @@ func getParamsExtra() string {
 		character, _ := reader.ReadString('\n')
 		character = strings.Replace(character, "\n", "", -1)
 		fmt.Println()
-		fmt.Println("*********************************************")
+		fmt.Println("******************************************************************************************")
+		fmt.Println("//////////////////////////////////////////////////////////////////////////////////////////")
+		fmt.Println("******************************************************************************************")
 		fmt.Println()
 
 		params = searchParameters("1", character, "")
