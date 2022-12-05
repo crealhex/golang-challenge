@@ -1,4 +1,5 @@
-# ed-challenge
+# Social Network API
+## golang-challenge
 
 ###### Consumiendo la API de Marvel
 
